@@ -1,52 +1,33 @@
-use std::time::Duration;
-
 use bevy::{
-    DefaultPlugins,
-    app::App,
-    asset::AssetServer,
-    prelude::{Camera2dBundle, Commands, IntoSystemConfig, Local, Query, Res, Transform, With},
-    sprite::SpriteBundle,
-    time::common_conditions::on_timer,
-    window::{PrimaryWindow, Window, WindowMode, WindowResolution},
+    ecs::schedule::{LogLevel, ScheduleBuildSettings},
+    prelude::*,
 };
+
+#[derive(Debug, Default, Clone, Eq, PartialEq, Hash, States)]
+enum AppState {
+    #[default]
+    Menu,
+    InGame,
+}
+
+#[derive(Resource, Default)]
+struct Data;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_startup_system(setup)
-        .add_system(toggle_fullscreen.run_if(on_timer(Duration::from_secs(4))))
+        .add_state::<AppState>()
+        .init_resource::<Data>()
+        .edit_schedule(CoreSchedule::Main, |schedule| {
+            schedule.set_build_settings(ScheduleBuildSettings {
+                ambiguity_detection: LogLevel::Error,
+                ..Default::default()
+            });
+        })
+        .add_system(menu.run_if(in_state(AppState::Menu)))
+        .add_system(game.run_if(in_state(AppState::InGame)))
         .run();
 }
 
-fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(Camera2dBundle::default());
-
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("bevy_bird_dark.png"),
-        transform: Transform::from_xyz(0., 100., 0.),
-        ..Default::default()
-    });
-
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("bevy_bird_dark.png"),
-        transform: Transform::from_xyz(0., -100., f32::EPSILON),
-        ..Default::default()
-    });
-
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("array_texture.png"),
-        ..Default::default()
-    });
-}
-
-fn toggle_fullscreen(mut state: Local<bool>, mut windows: Query<&mut Window, With<PrimaryWindow>>) {
-    let mut window = windows.single_mut();
-    if *state {
-        window.resolution = WindowResolution::new(800., 640.);
-        window.mode = WindowMode::Windowed;
-    } else {
-        window.resolution = WindowResolution::new(1920., 1080.);
-        window.mode = WindowMode::Fullscreen;
-    }
-    *state = !*state;
-}
+fn menu(mut _data: ResMut<Data>) {}
+fn game(mut _data: ResMut<Data>) {}
